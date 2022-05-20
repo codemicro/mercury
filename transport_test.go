@@ -42,7 +42,7 @@ func Test_parseRequsest(t *testing.T) {
 
 func Test_response_Encode(t *testing.T) {
 	type fields struct {
-		status  StatusCode
+		status  Status
 		meta    []byte
 		content []byte
 	}

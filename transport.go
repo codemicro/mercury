@@ -53,7 +53,7 @@ var (
 )
 
 type response struct {
-	status  StatusCode
+	status  Status
 	meta    []byte
 	content []byte
 }
