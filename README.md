@@ -1,6 +1,6 @@
 # Mercury
 
-*A framework for writing applications using the Gemini protocol*
+*A framework for writing Go applications using the Gemini protocol*
 
 ---
 
