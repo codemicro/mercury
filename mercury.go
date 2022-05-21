@@ -6,9 +6,17 @@ import (
 	"log"
 )
 
+type HandlerFunction func(ctx *Ctx) error
+
+type handler struct {
+	f    HandlerFunction
+	path string
+}
+
 type App struct {
 	certificate tls.Certificate
 	logger      *log.Logger
+	callstack   []*handler
 }
 
 func New(conf ...AppConfigFunction) (*App, error) {
@@ -31,6 +39,15 @@ func (app *App) log(format string, args ...any) {
 	}
 }
 
+// Add registers a handler function to be used to serve requests to a specific
+// URL.
+func (app *App) Add(path string, handlerFunction HandlerFunction) {
+	app.callstack = append(app.callstack, &handler{
+		f:    handlerFunction,
+		path: path,
+	})
+}
+
 func (app *App) Listen(addr string) error {
 	listener, err := tls.Listen("tcp", addr, &tls.Config{
 		Certificates: []tls.Certificate{app.certificate},
@@ -41,6 +58,7 @@ func (app *App) Listen(addr string) error {
 	if err != nil {
 		return err
 	}
+	// TODO: You can call this and it'll stop any blocked calls to listener.Accept
 	defer listener.Close()
 
 	for {
