@@ -2,8 +2,8 @@ package mercury
 
 import (
 	"crypto/tls"
-	"fmt"
 	"log"
+	"strings"
 )
 
 type HandlerFunction func(ctx *Ctx) error
@@ -44,7 +44,7 @@ func (app *App) log(format string, args ...any) {
 func (app *App) Add(path string, handlerFunction HandlerFunction) {
 	app.callstack = append(app.callstack, &handler{
 		f:    handlerFunction,
-		path: path,
+		path: strings.ToLower(path),
 	})
 }
 
@@ -90,12 +90,29 @@ func (app *App) Listen(addr string) error {
 			continue
 		}
 
-		content := fmt.Sprintf(
-			"Hello world! This page was served from Mercury.\n\nYou requested %s.",
-			parsedRequest.URL.String(),
-		)
+		handlerForPath := app.getHandlerForPath(parsedRequest.URL.Path)
+		if handlerForPath == nil {
+			// TODO: Return a not found error to the error handler here
+			app.log("mercury: no matching handler")
+			_ = tlsConn.Close()
+			continue
+		}
 
-		respBytes, _ := (&response{status: StatusSuccess, meta: []byte("text/plain"), content: []byte(content)}).Encode()
+		resp := &response{
+			status: StatusSuccess,
+			meta:   []byte("text/plain"),
+		}
+
+		ctx := &Ctx{
+			request:  parsedRequest,
+			response: resp,
+		}
+
+		if err := handlerForPath.f(ctx); err != nil {
+			// TODO: proper error handler here
+		}
+
+		respBytes, _ := resp.Encode()
 
 		_, _ = tlsConn.Write(respBytes)
 		_ = tlsConn.Close()
