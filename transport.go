@@ -14,7 +14,7 @@ var (
 )
 
 type request struct {
-	*url.URL
+	URL *url.URL
 }
 
 func parseRequest(x []byte) (*request, error) {
