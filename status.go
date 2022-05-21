@@ -21,7 +21,7 @@ const (
 	StatusNotFound            Status = 51
 	StatusGone                Status = 52
 	StatusProxyRequestRefused Status = 53
-	StausBadRequest           Status = 59
+	StatusBadRequest          Status = 59
 
 	StatusClientCertificateRequired Status = 60
 	StatusCertificateNotAuthorised  Status = 61

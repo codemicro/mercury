@@ -8,9 +8,9 @@ import (
 )
 
 var (
-	errorRequestURLTooLong     = errors.New("mercury: request URL length is greater than 1024 characters")
-	errorRequestURLHasNoScheme = errors.New("mercury: request URL has no scheme")
-	errorMalformedRequest      = errors.New("mercury: malformed request")
+	errorRequestURLTooLong     = NewError("Request URL length is greater than 1024 characters", StatusBadRequest)
+	errorRequestURLHasNoScheme = NewError("Request URL has no scheme", StatusBadRequest)
+	errorMalformedRequest      = NewError("Malformed request", StatusBadRequest)
 )
 
 type request struct {
