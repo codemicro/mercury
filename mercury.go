@@ -112,7 +112,8 @@ func (app *App) Listen(addr string) error {
 				continue
 			}
 		}
-		_, _ = tlsConn.Write(respBytes)
+
+		app.writeToConn(tlsConn, respBytes)
 		_ = tlsConn.Close()
 	}
 
@@ -139,9 +140,14 @@ func (app *App) callErrorHandler(conn *tls.Conn, ctx *Ctx, err error) (connClose
 			_ = conn.Close()
 			return true
 		}
-		_, _ = conn.Write(respBytes)
+		app.writeToConn(conn, respBytes)
 		_ = conn.Close()
 		return true
 	}
 	return false
+}
+
+func (app *App) writeToConn(tls *tls.Conn, content []byte) {
+	app.logger.Printf("sending response with content %#v", string(content))
+	_, _ = tls.Write(content)
 }
