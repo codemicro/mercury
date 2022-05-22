@@ -5,11 +5,13 @@ import (
 	"errors"
 	"net/url"
 	"strconv"
+	"strings"
 )
 
 var (
 	errorRequestURLTooLong     = NewError("Request URL length is greater than 1024 characters", StatusBadRequest)
 	errorRequestURLHasNoScheme = NewError("Request URL has no scheme", StatusBadRequest)
+	errorRequestHasWrongScheme = NewError("Request URL has an incorrect scheme (server can only deal with Gemini requests)", StatusBadRequest)
 	errorMalformedRequest      = NewError("Malformed request", StatusBadRequest)
 )
 
@@ -40,6 +42,10 @@ func parseRequest(x []byte) (*request, error) {
 
 	if parsed.Scheme == "" {
 		return nil, errorRequestURLHasNoScheme
+	}
+
+	if !strings.EqualFold(parsed.Scheme, "gemini") {
+		return nil, errorRequestHasWrongScheme
 	}
 
 	return &request{

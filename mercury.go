@@ -14,14 +14,16 @@ type handler struct {
 }
 
 type App struct {
-	certificate tls.Certificate
-	logger      *log.Logger
-	callstack   []*handler
+	certificate  tls.Certificate
+	logger       *log.Logger
+	callstack    []*handler
+	errorHandler ErrorHandlerFunction
 }
 
 func New(conf ...AppConfigFunction) (*App, error) {
 	app := &App{
-		logger: log.Default(),
+		logger:       log.Default(),
+		errorHandler: DefaultErrorHandler,
 	}
 
 	for _, f := range conf {
@@ -29,6 +31,8 @@ func New(conf ...AppConfigFunction) (*App, error) {
 			return nil, err
 		}
 	}
+
+	app.logger.SetPrefix("mercury: ")
 
 	return app, nil
 }
@@ -64,59 +68,80 @@ func (app *App) Listen(addr string) error {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			app.log("mercury: error when accepting connection: %v", err)
+			app.log("error when accepting connection: %v", err)
 			continue
 		}
 
 		tlsConn, ok := conn.(*tls.Conn)
 		if !ok {
-			app.log("mercury: got non-TLS connection")
+			app.log("got non-TLS connection")
 			_ = conn.Close()
 			continue
 		}
 
 		requestBytes := make([]byte, 1026) // Maximum length request URL + CRLF = 1026 bytes
 		if _, err = tlsConn.Read(requestBytes); err != nil {
-			app.log("mercury: could not read request: %v", err)
+			app.log("could not read request: %v", err)
 			_ = tlsConn.Close()
 			continue
 		}
 
 		parsedRequest, err := parseRequest(requestBytes)
 		if err != nil {
-			// TODO: Pass this to an proper error handler instead of dropping the connection
-			app.log("mercury: could not parse request: %v", err)
-			_ = tlsConn.Close()
-			continue
+			_ = app.callErrorHandler(tlsConn, nil, err)
+			continue // when ctx == nil in callErrorHandler, the connection is always closed.
 		}
 
 		handlerForPath := app.getHandlerForPath(parsedRequest.URL.Path)
 		if handlerForPath == nil {
-			// TODO: Return a not found error to the error handler here
-			app.log("mercury: no matching handler")
-			_ = tlsConn.Close()
-			continue
+			_ = app.callErrorHandler(tlsConn, nil, NewError("Not found", StatusNotFound))
+			continue // when ctx == nil in callErrorHandler, the connection is always closed.
 		}
 
-		resp := &response{
-			status: StatusSuccess,
-			meta:   []byte("text/plain"),
-		}
-
-		ctx := &Ctx{
-			request:  parsedRequest,
-			response: resp,
-		}
+		ctx := newCtx(parsedRequest)
 
 		if err := handlerForPath.f(ctx); err != nil {
-			// TODO: proper error handler here
+			if requestClosed := app.callErrorHandler(tlsConn, ctx, err); requestClosed {
+				continue
+			}
 		}
 
-		respBytes, _ := resp.Encode()
-
+		respBytes, err := ctx.response.Encode()
+		if err != nil {
+			if requestClosed := app.callErrorHandler(tlsConn, ctx, err); requestClosed {
+				continue
+			}
+		}
 		_, _ = tlsConn.Write(respBytes)
 		_ = tlsConn.Close()
 	}
 
 	return nil
+}
+
+// callErrorHandler will always close the request if no ctx is provided, else
+// the connection may or may not be closed.
+func (app *App) callErrorHandler(conn *tls.Conn, ctx *Ctx, err error) (connClosed bool) {
+	ctxWasProvided := ctx != nil
+	if !ctxWasProvided {
+		ctx = newCtx(nil)
+	}
+
+	if err2 := app.errorHandler(ctx, err); err2 != nil {
+		app.log("error handler returned error '%v' when handling error '%v'", err2, err)
+		_ = conn.Close()
+		return true
+	}
+
+	if !ctxWasProvided {
+		respBytes, err := ctx.response.Encode()
+		if err != nil {
+			_ = conn.Close()
+			return true
+		}
+		_, _ = conn.Write(respBytes)
+		_ = conn.Close()
+		return true
+	}
+	return false
 }
