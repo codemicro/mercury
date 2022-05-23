@@ -51,9 +51,16 @@ func (ctx *Ctx) Next() error {
 			return NewError("Not found", StatusNotFound)
 		}
 		h := ctx.callstack[ctx.stackPointer]
-		ctx.stackPointer += 1
 		if doesHandlerMatchPath(ctx.request.pathComponents, h) {
-			return h.f(ctx)
+			// Some context functions use the stackPointer variable to get a
+			// reference to the current *handler. Incrementing stackPointer
+			// after calling the handler function ensures the stackPointer
+			// always contains the correct value to point to the current
+			// handler when the handler function is running.
+			e := h.f(ctx)
+			ctx.stackPointer += 1
+			return e
 		}
+		ctx.stackPointer += 1
 	}
 }
