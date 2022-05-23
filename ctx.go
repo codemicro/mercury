@@ -2,6 +2,7 @@ package mercury
 
 import (
 	"fmt"
+	"strings"
 )
 
 type Ctx struct {
@@ -51,16 +52,30 @@ func (ctx *Ctx) Next() error {
 			return NewError("Not found", StatusNotFound)
 		}
 		h := ctx.callstack[ctx.stackPointer]
-		if doesHandlerMatchPath(ctx.request.pathComponents, h) {
-			// Some context functions use the stackPointer variable to get a
-			// reference to the current *handler. Incrementing stackPointer
-			// after calling the handler function ensures the stackPointer
-			// always contains the correct value to point to the current
-			// handler when the handler function is running.
-			e := h.f(ctx)
-			ctx.stackPointer += 1
-			return e
-		}
 		ctx.stackPointer += 1
+		if doesHandlerMatchPath(ctx.request.pathComponents, h) {
+			return h.f(ctx)
+		}
 	}
+}
+
+func (ctx *Ctx) getHandler() *handler {
+	return ctx.callstack[ctx.stackPointer-1]
+}
+
+func (ctx *Ctx) GetURLParamWithDefault(name, defaultValue string) string {
+	h := ctx.getHandler()
+	for i, part := range h.pathComponents {
+		if !strings.HasPrefix(part, ":") {
+			continue
+		}
+		if part[1:] == name {
+			return ctx.request.pathComponents[i]
+		}
+	}
+	return defaultValue
+}
+
+func (ctx *Ctx) GetURLParam(name string) string {
+	return ctx.GetURLParamWithDefault(name, "")
 }

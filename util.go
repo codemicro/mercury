@@ -9,6 +9,8 @@ func splitPath(path string) []string {
 	if path == "/" {
 		return []string{""}
 	}
+	path = strings.TrimSuffix(path, "/") // if only some of the paths have
+	// this and others don't, they won't match when they potentially should
 	return strings.Split(path, "/")
 }
 
@@ -18,18 +20,6 @@ func sliceHasPrefix[T comparable](s []T, prefix []T) bool {
 	}
 	for i := 0; i < len(prefix); i += 1 {
 		if s[i] != prefix[i] {
-			return false
-		}
-	}
-	return true
-}
-
-func sliceEqual[T comparable](s []T, v []T) bool {
-	if len(s) != len(v) {
-		return false
-	}
-	for i := 0; i < len(s); i += 1 {
-		if s[i] != v[i] {
 			return false
 		}
 	}
