@@ -16,7 +16,8 @@ var (
 )
 
 type request struct {
-	URL *url.URL
+	URL            *url.URL
+	pathComponents []string
 }
 
 func parseRequest(x []byte) (*request, error) {
@@ -49,7 +50,8 @@ func parseRequest(x []byte) (*request, error) {
 	}
 
 	return &request{
-		URL: parsed,
+		URL:            parsed,
+		pathComponents: splitPath(strings.ToLower(parsed.Path)),
 	}, nil
 }
 

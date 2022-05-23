@@ -1,13 +1,13 @@
 package mercury
 
-import "strings"
+import (
+	"fmt"
+)
 
-func (app *App) getHandlerForPath(path string) *handler {
-	path = strings.ToLower(path)
-	for _, h := range app.callstack {
-		if h.path == path {
-			return h
-		}
+func doesHandlerMatchPath(path []string, h *handler) bool {
+	fmt.Printf("%#v %#v\n", path, h)
+	if h.isMiddleware {
+		return sliceHasPrefix(path, h.pathComponents)
 	}
-	return nil
+	return sliceEqual(path, h.pathComponents)
 }

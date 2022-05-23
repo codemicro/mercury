@@ -44,7 +44,8 @@ func WithLogger(x *log.Logger) AppConfigFunction {
 
 // WithErrorHandler sets the error handler that's used by the app.
 //
-// The error handler must not make use of request variables.
+// The error handler must not make use of request variables. The
+// error handler must not call (*ctx).Next()
 func WithErrorHandler(eh ErrorHandlerFunction) AppConfigFunction {
 	return func(app *App) error {
 		if eh == nil {

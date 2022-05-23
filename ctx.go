@@ -5,19 +5,23 @@ import (
 )
 
 type Ctx struct {
-	request  *request
-	response *response
+	request   *request
+	response  *response
+	callstack []*handler
+	// stackPointer points to the current handler in use from callstack
+	stackPointer int
 }
 
-func newCtx(req *request) *Ctx {
+func newCtx(callStack []*handler, req *request) *Ctx {
 	resp := &response{
 		status: StatusSuccess,
 		meta:   []byte("text/plain"),
 	}
 
 	return &Ctx{
-		request:  req,
-		response: resp,
+		request:   req,
+		response:  resp,
+		callstack: callStack,
 	}
 }
 
@@ -39,4 +43,17 @@ func (ctx *Ctx) SetBody(body string) {
 
 func (ctx *Ctx) ClearBody() {
 	ctx.response.content = nil
+}
+
+func (ctx *Ctx) Next() error {
+	for {
+		if ctx.stackPointer >= len(ctx.callstack) {
+			return NewError("Not found", StatusNotFound)
+		}
+		h := ctx.callstack[ctx.stackPointer]
+		ctx.stackPointer += 1
+		if doesHandlerMatchPath(ctx.request.pathComponents, h) {
+			return h.f(ctx)
+		}
+	}
 }

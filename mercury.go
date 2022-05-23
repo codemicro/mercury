@@ -9,8 +9,9 @@ import (
 type HandlerFunction func(ctx *Ctx) error
 
 type handler struct {
-	f    HandlerFunction
-	path string
+	f              HandlerFunction
+	pathComponents []string
+	isMiddleware   bool
 }
 
 type App struct {
@@ -46,10 +47,25 @@ func (app *App) log(format string, args ...any) {
 // Add registers a handler function to be used to serve requests to a specific
 // URL.
 func (app *App) Add(path string, handlerFunction HandlerFunction) {
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
 	app.callstack = append(app.callstack, &handler{
-		f:    handlerFunction,
-		path: strings.ToLower(path),
+		f:              handlerFunction,
+		pathComponents: splitPath(strings.ToLower(path)),
 	})
+}
+
+func (app *App) UseOnPath(path string, hf HandlerFunction) {
+	app.callstack = append(app.callstack, &handler{
+		f:              hf,
+		pathComponents: splitPath(path),
+		isMiddleware:   true,
+	})
+}
+
+func (app *App) Use(hf HandlerFunction) {
+	app.UseOnPath("/", hf)
 }
 
 func (app *App) Listen(addr string) error {
@@ -92,15 +108,9 @@ func (app *App) Listen(addr string) error {
 			continue // when ctx == nil in callErrorHandler, the connection is always closed.
 		}
 
-		handlerForPath := app.getHandlerForPath(parsedRequest.URL.Path)
-		if handlerForPath == nil {
-			_ = app.callErrorHandler(tlsConn, nil, NewError("Not found", StatusNotFound))
-			continue // when ctx == nil in callErrorHandler, the connection is always closed.
-		}
+		ctx := newCtx(app.callstack, parsedRequest)
 
-		ctx := newCtx(parsedRequest)
-
-		if err := handlerForPath.f(ctx); err != nil {
+		if err := ctx.Next(); err != nil {
 			if requestClosed := app.callErrorHandler(tlsConn, ctx, err); requestClosed {
 				continue
 			}
@@ -125,7 +135,7 @@ func (app *App) Listen(addr string) error {
 func (app *App) callErrorHandler(conn *tls.Conn, ctx *Ctx, err error) (connClosed bool) {
 	ctxWasProvided := ctx != nil
 	if !ctxWasProvided {
-		ctx = newCtx(nil)
+		ctx = newCtx(nil, nil)
 	}
 
 	if err2 := app.errorHandler(ctx, err); err2 != nil {
