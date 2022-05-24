@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"strings"
 )
@@ -47,15 +48,29 @@ func (ctx *Ctx) SetMeta(meta string) error {
 	return nil
 }
 
+// SetBody sets the response body to a single string. This will be overridden
+// if (*ctx).SetBodyBuilder is used.
 func (ctx *Ctx) SetBody(body string) {
 	ctx.response.content = []byte(body)
 }
 
+// SetBodyFromFile reads a file with the specified name and uses its contents
+// as the response body. This will be overridden if (*ctx).SetBodyBuilder is
+// used.
+func (ctx *Ctx) SetBodyFromFile(filename string) error {
+	cont, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return err
+	}
+	ctx.response.content = cont
+	return nil
+}
+
 // SetBodyBuilder allows a strings.Builder to be used to create the response
-// body. This will overwrite any calls made to (*ctx).SetBody.
+// body. This will overwrite any other calls made to set the response body.
 //
 // To undo this, call SetBodyBuilder with a nil *strings.Builder then call
-// (*ctx).SetBody as normal.
+// other body-setting functions as normal.
 func (ctx *Ctx) SetBodyBuilder(sb *strings.Builder) {
 	ctx.bodyBuilder = sb
 }
