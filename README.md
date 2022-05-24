@@ -55,7 +55,7 @@ func run() error {
 
 ## Install
 
-```go
+```
 go get github.com/codemicro/mercury
 ```
 
