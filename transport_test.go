@@ -18,10 +18,10 @@ func Test_parseRequsest(t *testing.T) {
 		want    *request
 		wantErr bool
 	}{
-		{"normal", []byte("gemini://gem.example.com\r\n"), &request{mustParseURL("gemini://gem.example.com")}, false},
+		{"normal", []byte("gemini://gem.example.com\r\n"), &request{mustParseURL("gemini://gem.example.com"), []string{""}}, false},
 		{"noScheme", []byte("gem.example.com\r\n"), nil, true},
 		{"leadingByteOrderMark", []byte("\uFFFFgemini://gem.example.com\r\n"), nil, true},
-		{"contentAfterCRLF", []byte("gemini://gem.example.com\r\ngsdkljgldkfjldfkjg"), &request{mustParseURL("gemini://gem.example.com")}, false},
+		{"contentAfterCRLF", []byte("gemini://gem.example.com\r\ngsdkljgldkfjldfkjg"), &request{mustParseURL("gemini://gem.example.com"), []string{""}}, false},
 		{"randomRubbish", []byte("xcdfgclkjfghlskdjfg"), nil, true},
 		{"invalidURL", []byte("xcdfgclkjfghlskdjfg"), nil, true},
 		{"urlTooLong", []byte("gemini://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.com\r\n"), nil, true},
