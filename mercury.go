@@ -28,6 +28,7 @@ type App struct {
 	readTimeout           time.Duration
 	writeTimeout          time.Duration
 	disableStartupMessage bool
+	serverName            string
 }
 
 func New(conf ...AppConfigFunction) (*App, error) {
@@ -90,7 +91,7 @@ func (app *App) Listen(addr string) error {
 
 	listener, err := tls.Listen("tcp", addr, &tls.Config{
 		Certificates: []tls.Certificate{app.certificate},
-		ServerName:   "", // TODO(codemicro)
+		ServerName:   app.serverName,
 		ClientAuth:   tls.RequestClientCert,
 		MinVersion:   tls.VersionTLS12,
 	})

@@ -96,3 +96,10 @@ func WithDisableStartupMessage() AppConfigFunction {
 		return nil
 	}
 }
+
+func WithServerName(name string) AppConfigFunction {
+	return func(app *App) error {
+		app.serverName = name
+		return nil
+	}
+}
