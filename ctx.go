@@ -9,9 +9,13 @@ import (
 )
 
 type Ctx struct {
-	tlsConn   *tls.Conn
-	request   *request
-	response  *response
+	tlsConn *tls.Conn
+
+	request  *request
+	response *response
+
+	bodyBuilder *strings.Builder
+
 	callstack []*handler
 	// stackPointer points to the current handler in use from callstack
 	stackPointer int
@@ -37,7 +41,7 @@ func (ctx *Ctx) SetStatus(status Status) {
 
 func (ctx *Ctx) SetMeta(meta string) error {
 	if len(meta) > 1024 {
-		return fmt.Errorf("mercury: meta too long (%d > 1024)", len(meta))
+		return fmt.Errorf("mercury: meta too long (len %d > 1024)", len(meta))
 	}
 	ctx.response.meta = []byte(meta)
 	return nil
@@ -45,6 +49,23 @@ func (ctx *Ctx) SetMeta(meta string) error {
 
 func (ctx *Ctx) SetBody(body string) {
 	ctx.response.content = []byte(body)
+}
+
+// SetBodyBuilder allows a strings.Builder to be used to create the response
+// body. This will overwrite any calls made to (*ctx).SetBody.
+//
+// To undo this, call SetBodyBuilder with a nil *strings.Builder then call
+// (*ctx).SetBody as normal.
+func (ctx *Ctx) SetBodyBuilder(sb *strings.Builder) {
+	ctx.bodyBuilder = sb
+}
+
+func (ctx *Ctx) GetBody() *[]byte {
+	return &ctx.response.content
+}
+
+func (ctx *Ctx) GetMeta() *[]byte {
+	return &ctx.response.meta
 }
 
 func (ctx *Ctx) ClearBody() {
@@ -59,7 +80,11 @@ func (ctx *Ctx) Next() error {
 		h := ctx.callstack[ctx.stackPointer]
 		ctx.stackPointer += 1
 		if doesHandlerMatchPath(ctx.request.pathComponents, h) {
-			return h.f(ctx)
+			e := h.f(ctx)
+			if ctx.bodyBuilder != nil {
+				ctx.SetBody(ctx.bodyBuilder.String())
+			}
+			return e
 		}
 	}
 }
