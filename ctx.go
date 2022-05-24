@@ -1,11 +1,14 @@
 package mercury
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"strings"
 )
 
 type Ctx struct {
+	tlsConn   *tls.Conn
 	request   *request
 	response  *response
 	callstack []*handler
@@ -13,13 +16,14 @@ type Ctx struct {
 	stackPointer int
 }
 
-func newCtx(callStack []*handler, req *request) *Ctx {
+func newCtx(tlsConn *tls.Conn, callStack []*handler, req *request) *Ctx {
 	resp := &response{
 		status: StatusSuccess,
 		meta:   []byte("text/plain"),
 	}
 
 	return &Ctx{
+		tlsConn:   tlsConn,
 		request:   req,
 		response:  resp,
 		callstack: callStack,
@@ -90,4 +94,8 @@ func (ctx *Ctx) GetRawQueryWithDefault(defaultValue string) string {
 
 func (ctx *Ctx) GetRawQuery() string {
 	return ctx.GetRawQueryWithDefault("")
+}
+
+func (ctx *Ctx) GetClientCertificates() []*x509.Certificate {
+	return ctx.tlsConn.ConnectionState().PeerCertificates
 }

@@ -1,6 +1,10 @@
 package mercury
 
-import "strings"
+import (
+	"crypto"
+	"crypto/x509"
+	"strings"
+)
 
 func splitPath(path string) []string {
 	// if we have a single backslash and nothing else, we'll get
@@ -24,4 +28,15 @@ func sliceHasPrefix[T comparable](s []T, prefix []T) bool {
 		}
 	}
 	return true
+}
+
+// FingerprintCertificate computes a SHA1 hash of the raw certificate bytes.
+func FingerprintCertificate(cert *x509.Certificate) []byte {
+	return FingerprintCertificateWithHash(cert, crypto.SHA1)
+}
+
+// FingerprintCertificateWithHash computes a hash of a given type from the raw certificate bytes.
+func FingerprintCertificateWithHash(cert *x509.Certificate, hashType crypto.Hash) []byte {
+	hf := hashType.New()
+	return hf.Sum(cert.Raw)
 }

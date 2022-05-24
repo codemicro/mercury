@@ -108,7 +108,7 @@ func (app *App) Listen(addr string) error {
 			continue // when ctx == nil in callErrorHandler, the connection is always closed.
 		}
 
-		ctx := newCtx(app.callstack, parsedRequest)
+		ctx := newCtx(tlsConn, app.callstack, parsedRequest)
 
 		if err := ctx.Next(); err != nil {
 			if requestClosed := app.callErrorHandler(tlsConn, ctx, err); requestClosed {
@@ -135,7 +135,7 @@ func (app *App) Listen(addr string) error {
 func (app *App) callErrorHandler(conn *tls.Conn, ctx *Ctx, err error) (connClosed bool) {
 	ctxWasProvided := ctx != nil
 	if !ctxWasProvided {
-		ctx = newCtx(nil, nil)
+		ctx = newCtx(conn, nil, nil)
 	}
 
 	if err2 := app.errorHandler(ctx, err); err2 != nil {
