@@ -22,6 +22,7 @@ type handler struct {
 }
 
 type App struct {
+	// don't write to this stuff after a call to Listen
 	debug                 bool
 	certificate           tls.Certificate
 	logger                *log.Logger
@@ -32,6 +33,7 @@ type App struct {
 	disableStartupMessage bool
 	serverName            string
 
+	// thread-safe stuff
 	mu               *sync.Mutex
 	isListenerClosed bool
 	listener         net.Listener
@@ -124,54 +126,58 @@ func (app *App) Listen(addr string) error {
 			continue
 		}
 
-		tlsConn, ok := conn.(*tls.Conn)
-		if !ok {
-			app.log("got non-TLS connection")
-			_ = conn.Close()
-			continue
-		}
-
-		if app.readTimeout != 0 {
-			_ = tlsConn.SetReadDeadline(time.Now().Add(app.readTimeout))
-		}
-
-		if app.writeTimeout != 0 {
-			_ = tlsConn.SetWriteDeadline(time.Now().Add(app.writeTimeout))
-		}
-
-		requestBytes := make([]byte, 1026) // Maximum length request URL + CRLF = 1026 bytes
-		if _, err = tlsConn.Read(requestBytes); err != nil {
-			app.log("could not read request: %v", err)
-			_ = tlsConn.Close()
-			continue
-		}
-
-		parsedRequest, err := parseRequest(requestBytes)
-		if err != nil {
-			_ = app.callErrorHandler(tlsConn, nil, err)
-			continue // when ctx == nil in callErrorHandler, the connection is always closed.
-		}
-
-		ctx := newCtx(tlsConn, app.callstack, parsedRequest)
-
-		if err := ctx.Next(); err != nil {
-			if requestClosed := app.callErrorHandler(tlsConn, ctx, err); requestClosed {
-				continue
-			}
-		}
-
-		respBytes, err := ctx.response.Encode()
-		if err != nil {
-			if requestClosed := app.callErrorHandler(tlsConn, ctx, err); requestClosed {
-				continue
-			}
-		}
-
-		app.writeToConn(tlsConn, respBytes)
-		_ = tlsConn.Close()
+		go app.processConn(conn)
 	}
 
 	return nil
+}
+
+func (app *App) processConn(conn net.Conn) {
+	tlsConn, ok := conn.(*tls.Conn)
+	if !ok {
+		app.log("got non-TLS connection")
+		_ = conn.Close()
+		return
+	}
+
+	if app.readTimeout != 0 {
+		_ = tlsConn.SetReadDeadline(time.Now().Add(app.readTimeout))
+	}
+
+	if app.writeTimeout != 0 {
+		_ = tlsConn.SetWriteDeadline(time.Now().Add(app.writeTimeout))
+	}
+
+	requestBytes := make([]byte, 1026) // Maximum length request URL + CRLF = 1026 bytes
+	if _, err := tlsConn.Read(requestBytes); err != nil {
+		app.log("could not read request: %v", err)
+		_ = tlsConn.Close()
+		return
+	}
+
+	parsedRequest, err := parseRequest(requestBytes)
+	if err != nil {
+		_ = app.callErrorHandler(tlsConn, nil, err)
+		return // when ctx == nil in callErrorHandler, the connection is always closed for us.
+	}
+
+	ctx := newCtx(tlsConn, app.callstack, parsedRequest)
+
+	if err := ctx.Next(); err != nil {
+		if requestClosed := app.callErrorHandler(tlsConn, ctx, err); requestClosed {
+			return
+		}
+	}
+
+	respBytes, err := ctx.response.Encode()
+	if err != nil {
+		if requestClosed := app.callErrorHandler(tlsConn, ctx, err); requestClosed {
+			return
+		}
+	}
+
+	app.writeToConn(tlsConn, respBytes)
+	_ = tlsConn.Close()
 }
 
 // Shutdown shuts down the app if it's listening
