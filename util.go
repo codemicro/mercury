@@ -18,18 +18,6 @@ func splitPath(path string) []string {
 	return strings.Split(path, "/")
 }
 
-func sliceHasPrefix[T comparable](s []T, prefix []T) bool {
-	if len(prefix) > len(s) {
-		return false
-	}
-	for i := 0; i < len(prefix); i += 1 {
-		if s[i] != prefix[i] {
-			return false
-		}
-	}
-	return true
-}
-
 // FingerprintCertificate computes a SHA1 hash of the raw certificate bytes.
 func FingerprintCertificate(cert *x509.Certificate) []byte {
 	return FingerprintCertificateWithHash(cert, crypto.SHA1)
