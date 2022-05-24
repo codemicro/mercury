@@ -80,7 +80,7 @@ func (ctx *Ctx) GetURLParam(name string) string {
 	return ctx.GetURLParamWithDefault(name, "")
 }
 
-func (ctx *Ctx) GetQueryWithDefault(defaultValue string) string {
+func (ctx *Ctx) GetRawQueryWithDefault(defaultValue string) string {
 	if x := ctx.request.URL.RawQuery; x == "" {
 		return defaultValue
 	} else {
@@ -88,6 +88,6 @@ func (ctx *Ctx) GetQueryWithDefault(defaultValue string) string {
 	}
 }
 
-func (ctx *Ctx) GetQuery() string {
-	return ctx.GetQueryWithDefault("")
+func (ctx *Ctx) GetRawQuery() string {
+	return ctx.GetRawQueryWithDefault("")
 }
