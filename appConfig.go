@@ -90,6 +90,8 @@ func WithDebugModeEnabled() AppConfigFunction {
 	}
 }
 
+// WithDisableStartupMessage will disable the startup message printed to
+// os.Stderr on server start.
 func WithDisableStartupMessage() AppConfigFunction {
 	return func(app *App) error {
 		app.disableStartupMessage = true
@@ -97,6 +99,8 @@ func WithDisableStartupMessage() AppConfigFunction {
 	}
 }
 
+// WithServerName sets the server name used as part of the TLS configuration.
+// This can be left blank.
 func WithServerName(name string) AppConfigFunction {
 	return func(app *App) error {
 		app.serverName = name
