@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net"
+	"net/url"
 	"strings"
 )
 
@@ -143,4 +144,8 @@ func (ctx *Ctx) GetClientCertificates() []*x509.Certificate {
 
 func (ctx *Ctx) GetRemoteAddress() net.Addr {
 	return ctx.tlsConn.RemoteAddr()
+}
+
+func (ctx *Ctx) GetRequestURL() *url.URL {
+	return ctx.request.URL
 }
