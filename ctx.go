@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"net"
 	"strings"
 )
 
@@ -98,4 +99,8 @@ func (ctx *Ctx) GetRawQuery() string {
 
 func (ctx *Ctx) GetClientCertificates() []*x509.Certificate {
 	return ctx.tlsConn.ConnectionState().PeerCertificates
+}
+
+func (ctx *Ctx) GetRemoteAddress() net.Addr {
+	return ctx.tlsConn.RemoteAddr()
 }
