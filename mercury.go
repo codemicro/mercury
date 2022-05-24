@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"log"
 	"strings"
+	"time"
 )
 
 type HandlerFunction func(ctx *Ctx) error
@@ -19,6 +20,8 @@ type App struct {
 	logger       *log.Logger
 	callstack    []*handler
 	errorHandler ErrorHandlerFunction
+	readTimeout  time.Duration
+	writeTimeout time.Duration
 }
 
 func New(conf ...AppConfigFunction) (*App, error) {
@@ -93,6 +96,14 @@ func (app *App) Listen(addr string) error {
 			app.log("got non-TLS connection")
 			_ = conn.Close()
 			continue
+		}
+
+		if app.readTimeout != 0 {
+			_ = tlsConn.SetReadDeadline(time.Now().Add(app.readTimeout))
+		}
+
+		if app.writeTimeout != 0 {
+			_ = tlsConn.SetWriteDeadline(time.Now().Add(app.writeTimeout))
 		}
 
 		requestBytes := make([]byte, 1026) // Maximum length request URL + CRLF = 1026 bytes

@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"log"
+	"time"
 )
 
 type AppConfigFunction func(*App) error
@@ -52,6 +53,32 @@ func WithErrorHandler(eh ErrorHandlerFunction) AppConfigFunction {
 			return errors.New("mercury: no error handler provided")
 		}
 		app.errorHandler = eh
+		return nil
+	}
+}
+
+// WithReadTimeout sets the read timeout for any incoming connections.
+//
+// Setting this value to zero disables read timeouts.
+func WithReadTimeout(x time.Duration) AppConfigFunction {
+	return func(app *App) error {
+		if x < 0 {
+			return errors.New("mercury: cannot have negative read timeout")
+		}
+		app.readTimeout = x
+		return nil
+	}
+}
+
+// WithWriteTimeout sets the write timeout for any incoming connections.
+//
+// Setting this value to zero disables write timeouts.
+func WithWriteTimeout(x time.Duration) AppConfigFunction {
+	return func(app *App) error {
+		if x < 0 {
+			return errors.New("mercury: cannot have negative write timeout")
+		}
+		app.writeTimeout = x
 		return nil
 	}
 }
