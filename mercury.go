@@ -4,8 +4,10 @@ import (
 	"crypto/tls"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -29,12 +31,17 @@ type App struct {
 	writeTimeout          time.Duration
 	disableStartupMessage bool
 	serverName            string
+
+	mu               *sync.Mutex
+	isListenerClosed bool
+	listener         net.Listener
 }
 
 func New(conf ...AppConfigFunction) (*App, error) {
 	app := &App{
 		logger:       log.Default(),
 		errorHandler: DefaultErrorHandler,
+		mu:           new(sync.Mutex),
 	}
 
 	for _, f := range conf {
@@ -89,21 +96,30 @@ func (app *App) Listen(addr string) error {
 		}
 	}
 
+	app.mu.Lock()
 	listener, err := tls.Listen("tcp", addr, &tls.Config{
 		Certificates: []tls.Certificate{app.certificate},
 		ServerName:   app.serverName,
 		ClientAuth:   tls.RequestClientCert,
 		MinVersion:   tls.VersionTLS12,
 	})
+	app.listener = listener
+	app.mu.Unlock()
 	if err != nil {
 		return err
 	}
-	// TODO: You can call this and it'll stop any blocked calls to listener.Accept
-	defer listener.Close()
 
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
+			app.mu.Lock()
+			closed := app.isListenerClosed
+			app.mu.Unlock()
+
+			if closed {
+				break
+			}
+
 			app.log("error when accepting connection: %v", err)
 			continue
 		}
@@ -154,6 +170,23 @@ func (app *App) Listen(addr string) error {
 		app.writeToConn(tlsConn, respBytes)
 		_ = tlsConn.Close()
 	}
+
+	return nil
+}
+
+// Shutdown shuts down the app if it's listening
+func (app *App) Shutdown() error {
+	app.mu.Lock()
+	defer app.mu.Unlock()
+
+	if app.listener == nil {
+		return nil
+	}
+
+	if err := app.listener.Close(); err != nil {
+		return err
+	}
+	app.isListenerClosed = true
 
 	return nil
 }
