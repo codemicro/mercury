@@ -116,7 +116,7 @@ func (ctx *Ctx) GetURLParamWithDefault(name, defaultValue string) string {
 			continue
 		}
 		if part[1:] == name {
-			return ctx.request.pathComponents[i]
+			return splitPath(ctx.request.URL.Path)[i]
 		}
 	}
 	return defaultValue
