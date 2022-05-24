@@ -1,12 +1,10 @@
 package mercury
 
 import (
-	"fmt"
 	"strings"
 )
 
 func doesHandlerMatchPath(path []string, h *handler) bool {
-	fmt.Printf("%#v %#v\n", path, h)
 	if h.isMiddleware {
 		if len(h.pathComponents) > len(path) {
 			return false

@@ -82,3 +82,17 @@ func WithWriteTimeout(x time.Duration) AppConfigFunction {
 		return nil
 	}
 }
+
+func WithDebugModeEnabled() AppConfigFunction {
+	return func(app *App) error {
+		app.debug = true
+		return nil
+	}
+}
+
+func WithDisableStartupMessage() AppConfigFunction {
+	return func(app *App) error {
+		app.disableStartupMessage = true
+		return nil
+	}
+}

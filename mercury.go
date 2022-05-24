@@ -2,10 +2,14 @@ package mercury
 
 import (
 	"crypto/tls"
+	"fmt"
 	"log"
+	"os"
 	"strings"
 	"time"
 )
+
+const startupLogo = " _____                         \n|     |___ ___ ___ _ _ ___ _ _ \n| | | | -_|  _|  _| | |  _| | |\n|_|_|_|___|_| |___|___|_| |_  |\n                          |___|"
 
 type HandlerFunction func(ctx *Ctx) error
 
@@ -16,12 +20,14 @@ type handler struct {
 }
 
 type App struct {
-	certificate  tls.Certificate
-	logger       *log.Logger
-	callstack    []*handler
-	errorHandler ErrorHandlerFunction
-	readTimeout  time.Duration
-	writeTimeout time.Duration
+	debug                 bool
+	certificate           tls.Certificate
+	logger                *log.Logger
+	callstack             []*handler
+	errorHandler          ErrorHandlerFunction
+	readTimeout           time.Duration
+	writeTimeout          time.Duration
+	disableStartupMessage bool
 }
 
 func New(conf ...AppConfigFunction) (*App, error) {
@@ -72,6 +78,16 @@ func (app *App) Use(hf HandlerFunction) {
 }
 
 func (app *App) Listen(addr string) error {
+	if !app.disableStartupMessage {
+		_, _ = fmt.Fprintln(os.Stderr, startupLogo)
+		_, _ = fmt.Fprint(os.Stderr, "Listening on gemini://")
+		if strings.HasPrefix(addr, ":") {
+			_, _ = fmt.Fprintln(os.Stderr, "0.0.0.0"+addr)
+		} else {
+			_, _ = fmt.Fprintln(os.Stderr, addr)
+		}
+	}
+
 	listener, err := tls.Listen("tcp", addr, &tls.Config{
 		Certificates: []tls.Certificate{app.certificate},
 		ServerName:   "", // TODO(codemicro)
@@ -169,6 +185,8 @@ func (app *App) callErrorHandler(conn *tls.Conn, ctx *Ctx, err error) (connClose
 }
 
 func (app *App) writeToConn(tls *tls.Conn, content []byte) {
-	app.logger.Printf("sending response with content %#v", string(content))
+	if app.debug {
+		app.logger.Printf("sending response with content %#v", string(content))
+	}
 	_, _ = tls.Write(content)
 }
