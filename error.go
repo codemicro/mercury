@@ -7,6 +7,7 @@ type Error struct {
 	Status  Status
 }
 
+// NewError creates an error that can be turned into a Gemini response.
 func NewError(message string, status Status) error {
 	return &Error{
 		Message: message,
@@ -18,6 +19,8 @@ func (e Error) Error() string {
 	return e.Message
 }
 
+// DefaultErrorHandler is the error handler used when no other error handler
+// is set.
 func DefaultErrorHandler(ctx *Ctx, err error) error {
 	ctx.ClearBody()
 	if e, ok := err.(*Error); ok {

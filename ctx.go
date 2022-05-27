@@ -164,6 +164,8 @@ func (ctx *Ctx) GetRawQuery() string {
 	return ctx.GetRawQueryWithDefault("")
 }
 
+// GetClientCertificates retrieves the certificates provided to the server as
+// part of the Gemini request. Use these in order to identify a given client.
 func (ctx *Ctx) GetClientCertificates() []*x509.Certificate {
 	return ctx.tlsConn.ConnectionState().PeerCertificates
 }
@@ -172,6 +174,7 @@ func (ctx *Ctx) GetRemoteAddress() net.Addr {
 	return ctx.tlsConn.RemoteAddr()
 }
 
+// GetRequestURL returns the exact URL requested by the server.
 func (ctx *Ctx) GetRequestURL() *url.URL {
 	return ctx.request.URL
 }
